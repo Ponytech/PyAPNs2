@@ -2,6 +2,8 @@ import time
 from typing import Optional, Tuple, TYPE_CHECKING
 
 import jwt
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
 
 from hyper import HTTP20Connection  # type: ignore
 from hyper.tls import init_context  # type: ignore
@@ -44,9 +46,13 @@ class CertificateCredentials(Credentials):
 class TokenCredentials(Credentials):
     def __init__(self, auth_key_path: str, auth_key_id: str, team_id: str,
                  encryption_algorithm: str = DEFAULT_TOKEN_ENCRYPTION_ALGORITHM,
-                 token_lifetime: int = DEFAULT_TOKEN_LIFETIME) -> None:
+                 token_lifetime: int = DEFAULT_TOKEN_LIFETIME, auth_key_password: Optional[str] = None) -> None:
         self.__auth_key = self._get_signing_key(auth_key_path)
         self.__auth_key_id = auth_key_id
+        if auth_key_password:
+            self.__auth_key = serialization.load_pem_private_key(
+                self.__auth_key.encode(), password=auth_key_password.encode(), backend=default_backend()
+            )
         self.__team_id = team_id
         self.__encryption_algorithm = encryption_algorithm
         self.__token_lifetime = token_lifetime
